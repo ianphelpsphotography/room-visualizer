@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room Visualizer — Ian Phelps Photography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f7f4ef;
+    --warm-white: #fdfbf8;
+    --charcoal: #1e1e1c;
+    --mid: #6b6860;
+    --light: #b8b4ad;
+    --border: #e2ddd7;
+    --accent: #8b6f4e;
+    --accent-light: #e8ddd2;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Jost', system-ui, sans-serif;
+    --radius: 4px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--cream);
+    color: var(--charcoal);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  header {
+    background: var(--warm-white);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--charcoal);
+  }
+
+  header span {
+    font-size: 12px;
+    color: var(--mid);
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  header a {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  header a:hover { text-decoration: underline; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    min-height: calc(100vh - 61px);
+  }
+
+  /* LEFT PANEL — canvas */
+  .canvas-panel {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .canvas-area {
+    position: relative;
+    background: #2a2a28;
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: crosshair;
+    flex: 1;
+  }
+
+  #room-canvas { display: block; max-width: 100%; max-height: 600px; }
+
+  .upload-state {
+    text-align: center;
+    color: #9a9890;
+    padding: 48px 32px;
+    pointer-events: none;
+  }
+
+  .upload-state svg {
+    display: block;
+    margin: 0 auto 16px;
+    opacity: 0.4;
+  }
+
+  .upload-state h2 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 300;
+    color: #c8c4bc;
+    margin-bottom: 8px;
+  }
+
+  .upload-state p {
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 1.7;
+    max-width: 280px;
+    margin: 0 auto 24px;
+  }
+
+  .upload-btn-area { pointer-events: all; }
+
+  .canvas-hint {
+    font-size: 12px;
+    color: var(--mid);
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    text-align: center;
+    min-height: 18px;
+  }
+
+  .canvas-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* RIGHT PANEL — controls */
+  .controls-panel {
+    background: var(--warm-white);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ctrl-section {
+    padding: 20px 20px 0;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .ctrl-section:last-child { border-bottom: none; }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--light);
+    margin-bottom: 12px;
+  }
+
+  /* Print grid */
+  .category-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .cat-tab {
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 11px;
+    font-family: var(--font-body);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--mid);
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .cat-tab:not(:last-child) { border-right: 1px solid var(--border); }
+  .cat-tab.active { background: var(--charcoal); color: #fff; }
+  .cat-tab:hover:not(.active) { background: var(--cream); }
+
+  .print-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .print-grid::-webkit-scrollbar { width: 4px; }
+  .print-grid::-webkit-scrollbar-track { background: var(--cream); }
+  .print-grid::-webkit-scrollbar-thumb { background: var(--light); border-radius: 2px; }
+
+  .print-thumb {
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.15s;
+    background: var(--cream);
+  }
+
+  .print-thumb:hover { border-color: var(--light); }
+  .print-thumb.selected { border-color: var(--accent); }
+
+  .print-thumb img {
+    width: 100%;
+    height: 60px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .print-thumb-name {
+    font-size: 9px;
+    padding: 3px 4px;
+    color: var(--mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+  }
+
+  .selected-print-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--charcoal);
+    margin-bottom: 2px;
+    font-style: italic;
+  }
+
+  .selected-print-link {
+    font-size: 11px;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .selected-print-link:hover { text-decoration: underline; }
+
+  /* Sizes */
+  .size-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .size-chip {
+    padding: 6px 4px;
+    font-size: 11px;
+    font-family: var(--font-body);
+    font-weight: 400;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--charcoal);
+    background: var(--warm-white);
+    transition: all 0.15s;
+    line-height: 1.2;
+  }
+
+  .size-chip:hover:not(.unavailable) { border-color: var(--accent); color: var(--accent); }
+  .size-chip.selected { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
+
+  .size-chip.unavailable {
+    color: var(--light);
+    cursor: not-allowed;
+    text-decoration: line-through;
+    background: var(--cream);
+  }
+
+  .size-chip .size-label { display: block; }
+  .size-chip .size-note { display: block; font-size: 9px; color: var(--light); margin-top: 1px; }
+  .size-chip.selected .size-note { color: rgba(255,255,255,0.6); }
+
+  /* Frame options */
+  .frame-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .frame-opt {
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    background: var(--warm-white);
+  }
+
+  .frame-opt:hover { border-color: var(--accent-light); }
+  .frame-opt.selected { border-color: var(--accent); background: var(--accent-light); }
+
+  .frame-swatch {
+    width: 28px;
+    height: 20px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .frame-opt-label {
+    font-size: 11px;
+    color: var(--charcoal);
+    line-height: 1.3;
+    font-weight: 400;
+  }
+
+  /* Sliders */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .slider-row:last-child { margin-bottom: 0; }
+
+  .slider-label {
+    font-size: 11px;
+    color: var(--mid);
+    font-weight: 400;
+    min-width: 52px;
+    letter-spacing: 0.04em;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--charcoal);
+    cursor: pointer;
+    border: 2px solid var(--warm-white);
+    box-shadow: 0 0 0 1px var(--charcoal);
+  }
+
+  .slider-val {
+    font-size: 12px;
+    color: var(--charcoal);
+    min-width: 34px;
+    text-align: right;
+    font-weight: 300;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 9px 16px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    background: var(--warm-white);
+    color: var(--charcoal);
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: var(--cream); border-color: var(--mid); }
+
+  .btn.primary {
+    background: var(--charcoal);
+    color: var(--cream);
+    border-color: var(--charcoal);
+  }
+
+  .btn.primary:hover { background: #333330; }
+
+  .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* Footer info */
+  .size-info {
+    background: var(--accent-light);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+
+  .size-info p {
+    font-size: 11px;
+    color: var(--accent);
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  .size-info strong { font-weight: 500; }
+
+  /* Watermark overlay on canvas */
+  #wm-overlay {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    pointer-events: none;
+    letter-spacing: 0.04em;
+    font-style: italic;
+  }
+
+  /* Responsive */
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+    .controls-panel { border-left: none; border-top: 1px solid var(--border); }
+    .canvas-panel { padding: 12px; }
+    header { padding: 14px 16px; }
+    header a { display: none; }
+  }
+
+  /* Scrollbar for controls panel */
+  .controls-panel::-webkit-scrollbar { width: 4px; }
+  .controls-panel::-webkit-scrollbar-track { background: var(--warm-white); }
+  .controls-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Calibration overlay */
+  #cal-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #cal-overlay.active { pointer-events: all; cursor: crosshair; }
+
+  .cal-banner {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    background: rgba(20,20,18,0.82);
+    color: #f7f4ef;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(4px);
+  }
+
+  .cal-banner strong { font-weight: 500; color: #e8d8c4; }
+  .cal-banner .cal-cancel {
+    margin-left: auto;
+    font-size: 11px;
+    color: #b8b4ad;
+    cursor: pointer;
+    text-decoration: underline;
+    pointer-events: all;
+    background: none;
+    border: none;
+    font-family: var(--font-body);
+    letter-spacing: 0.04em;
+  }
+  .cal-banner .cal-cancel:hover { color: #f7f4ef; }
+
+  .cal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #2d5a3d;
+    color: #a8d5b5;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-left: 6px;
+  }
+
+  .cal-badge.uncal {
+    background: rgba(180,160,130,0.15);
+    color: var(--mid);
+  }
+
+  .btn.cal-btn {
+    border-color: #2d5a3d;
+    color: #2d5a3d;
+  }
+  .btn.cal-btn:hover { background: #f0f7f2; }
+  .btn.cal-btn.active-cal {
+    background: #2d5a3d;
+    color: #fff;
+    border-color: #2d5a3d;
+  }
+
+  .ref-select-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ref-opt {
+    padding: 5px 10px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    background: var(--warm-white);
+    color: var(--mid);
+    font-family: var(--font-body);
+    transition: all 0.15s;
+  }
+  .ref-opt:hover { border-color: var(--accent); color: var(--accent); }
+  .ref-opt.selected { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
+
+  .cal-info-box {
+    background: #f0f7f2;
+    border: 1px solid #c8e6d4;
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+  .cal-info-box p { font-size: 11px; color: #2d5a3d; line-height: 1.6; }
+  .cal-info-box.uncal-box { background: var(--accent-light); border-color: #d4c4b0; }
+  .cal-info-box.uncal-box p { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ian Phelps Photography</h1>
+  <span>Room Visualizer</span>
+  <a href="https://www.ianphelpsphotography.com" target="_blank">Visit Shop ↗</a>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Canvas -->
+  <div class="canvas-panel">
+    <div class="canvas-area" id="canvas-area">
+      <div id="upload-state" class="upload-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <h2>See it on your wall</h2>
+        <p>Upload a photo of your room or wall, then select a print and size to see how it looks in your space.</p>
+        <div class="upload-btn-area">
+          <button class="btn primary" onclick="document.getElementById('room-input').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Room Photo
+          </button>
+        </div>
+      </div>
+      <canvas id="room-canvas" style="display:none"></canvas>
+      <canvas id="cal-overlay" style="display:none;position:absolute;top:0;left:0;pointer-events:none"></canvas>
+      <div id="cal-banner" class="cal-banner" style="display:none">
+        <span id="cal-banner-text"><strong>Step 1 of 2:</strong> Click one edge of your reference paper</span>
+        <button class="cal-cancel" onclick="cancelCalibration()">Cancel</button>
+      </div>
+      <div id="wm-overlay" style="display:none">ianphelpsphotography.com</div>
+    </div>
+    <p class="canvas-hint" id="canvas-hint"></p>
+    <div class="canvas-actions">
+      <button class="btn" onclick="document.getElementById('room-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        New Photo
+      </button>
+      <button class="btn" onclick="resetPosition()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset Position
+      </button>
+      <button class="btn cal-btn" id="cal-btn" onclick="startCalibration()" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        <span id="cal-btn-label">Calibrate Scale</span>
+      </button>
+      <button class="btn primary" onclick="downloadImage()" id="download-btn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Save Image
+      </button>
+    </div>
+    <input type="file" id="room-input" accept="image/*" style="display:none">
+  </div>
+
+  <!-- RIGHT: Controls -->
+  <div class="controls-panel">
+
+    <!-- PRINT SELECTION -->
+    <div class="ctrl-section">
+      <div class="section-title">Choose a Print</div>
+      <div class="category-tabs">
+        <button class="cat-tab active" data-cat="landscapes" onclick="switchCat('landscapes',this)">Landscapes</button>
+        <button class="cat-tab" data-cat="wildlife" onclick="switchCat('wildlife',this)">Wildlife</button>
+        <button class="cat-tab" data-cat="panoramic" onclick="switchCat('panoramic',this)">Panoramic</button>
+      </div>
+      <div class="print-grid" id="print-grid"></div>
+      <div style="margin-top:10px">
+        <div class="selected-print-name" id="selected-name">Cascadia</div>
+        <a class="selected-print-link" id="selected-link" href="https://www.ianphelpsphotography.com/landscapes/cascadia" target="_blank">View &amp; Purchase →</a>
+      </div>
+    </div>
+
+    <!-- SIZE SELECTION -->
+    <div class="ctrl-section">
+      <div class="section-title">Print Size</div>
+      <div class="size-grid" id="size-grid"></div>
+      <div class="size-info" id="size-info" style="display:none">
+        <p id="size-info-text"></p>
+      </div>
+    </div>
+
+    <!-- PRINT TYPE -->
+    <div class="ctrl-section">
+      <div class="section-title">Print Type</div>
+      <div class="frame-grid" id="print-type-grid">
+        <div class="frame-opt selected" data-type="metal" onclick="selectPrintType('metal',this)">
+          <div class="frame-swatch" style="background:linear-gradient(135deg,#e8e4de,#c8c4bc);border:1px solid #b8b4ad"></div>
+          <div class="frame-opt-label">ChromaLuxe<br>HD Metal</div>
+        </div>
+        <div class="frame-opt" data-type="acrylic" onclick="selectPrintType('acrylic',this)">
+          <div class="frame-swatch" style="background:linear-gradient(135deg,#f0ede8,#dddad4);border:1px solid #ccc"></div>
+          <div class="frame-opt-label">Lumachrome<br>HD Acrylic</div>
+        </div>
+        <div class="frame-opt" data-type="paper" onclick="selectPrintType('paper',this)">
+          <div class="frame-swatch" style="background:#f5f2ed;border:1px solid #ddd"></div>
+          <div class="frame-opt-label">Fine Art<br>Loose Print</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME STYLE -->
+    <div class="ctrl-section">
+      <div class="section-title">Frame Style</div>
+      <div class="frame-grid" id="frame-grid">
+        <div class="frame-opt selected" data-frame="none" onclick="selectFrame('none',this)">
+          <div class="frame-swatch" style="background:transparent;border:1px dashed #ccc"></div>
+          <div class="frame-opt-label">No Frame<br><span style="font-size:9px;color:var(--light)">metal / acrylic</span></div>
+        </div>
+        <div class="frame-opt" data-frame="thin-black" onclick="selectFrame('thin-black',this)">
+          <div class="frame-swatch" style="background:#1a1a1a"></div>
+          <div class="frame-opt-label">Thin Black<br>Frame</div>
+        </div>
+        <div class="frame-opt" data-frame="thin-white" onclick="selectFrame('thin-white',this)">
+          <div class="frame-swatch" style="background:#f2ede7;border:1px solid #ddd"></div>
+          <div class="frame-opt-label">Thin White<br>Frame</div>
+        </div>
+        <div class="frame-opt" data-frame="natural" onclick="selectFrame('natural',this)">
+          <div class="frame-swatch" style="background:#b8976a"></div>
+          <div class="frame-opt-label">Natural Wood<br>Frame</div>
+        </div>
+        <div class="frame-opt" data-frame="mat-white" onclick="selectFrame('mat-white',this)">
+          <div class="frame-swatch" style="background:#f5f2ed;border:3px solid #1a1a1a"></div>
+          <div class="frame-opt-label">White Mat +<br>Black Frame</div>
+        </div>
+        <div class="frame-opt" data-frame="mat-black" onclick="selectFrame('mat-black',this)">
+          <div class="frame-swatch" style="background:#2a2a28;border:3px solid #4a4a48"></div>
+          <div class="frame-opt-label">Black Mat +<br>Dark Frame</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALIBRATION -->
+    <div class="ctrl-section" id="cal-section" style="display:none">
+      <div class="section-title">Scale Calibration <span id="cal-status-badge" class="cal-badge uncal">Not calibrated</span></div>
+      <p style="font-size:11px;color:var(--mid);line-height:1.6;margin-bottom:10px;font-weight:300">
+        For accurate sizing, tape a sheet of paper to your wall before photographing. Then calibrate here so prints render at true scale.
+      </p>
+      <div class="section-title" style="margin-bottom:6px">Reference object in photo</div>
+      <div class="ref-select-row" id="ref-select-row">
+        <button class="ref-opt selected" data-ref="letter-long" onclick="selectRef('letter-long',this)">Letter 11″</button>
+        <button class="ref-opt" data-ref="letter-short" onclick="selectRef('letter-short',this)">Letter 8.5″</button>
+        <button class="ref-opt" data-ref="a4-long" onclick="selectRef('a4-long',this)">A4 297mm</button>
+        <button class="ref-opt" data-ref="a4-short" onclick="selectRef('a4-short',this)">A4 210mm</button>
+        <button class="ref-opt" data-ref="12in" onclick="selectRef('12in',this)">12″ ruler</button>
+      </div>
+      <div id="cal-info-box" class="cal-info-box uncal-box">
+        <p id="cal-info-text">Select your reference object, then click "Calibrate Scale" below the image to mark its edges.</p>
+      </div>
+    </div>
+
+    <!-- ADJUSTMENTS -->
+    <div class="ctrl-section">
+      <div class="section-title">Adjustments</div>
+      <div class="slider-row">
+        <span class="slider-label">Scale</span>
+        <input type="range" id="scale-slider" min="15" max="220" value="100" step="1" oninput="onScale(this.value)">
+        <span class="slider-val" id="scale-val">100%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Shadow</span>
+        <input type="range" id="shadow-slider" min="0" max="24" value="10" step="1" oninput="onShadow(this.value)">
+        <span class="slider-val" id="shadow-val">10</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Brightness</span>
+        <input type="range" id="bright-slider" min="60" max="140" value="100" step="1" oninput="onBright(this.value)">
+        <span class="slider-val" id="bright-val">100%</span>
+      </div>
+    </div>
+
+    <!-- FOOTER NOTE -->
+    <div class="ctrl-section" style="padding-bottom:24px">
+      <p style="font-size:11px;color:var(--light);line-height:1.6;font-weight:300">
+        For accurate sizing, tape a sheet of letter paper to your wall before photographing, then use <em>Calibrate Scale</em> to mark its edges. Without calibration, sizes are approximate. All prints are custom made — allow 3–4 weeks for delivery.
+      </p>
+      <div style="margin-top:12px">
+        <a href="https://www.ianphelpsphotography.com/prints-and-licensing" target="_blank" class="btn" style="font-size:10px">About Print Types →</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const CATS = {
+  landscapes: [
+    {name:"Cascadia", slug:"cascadia", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1593557339261-A2JM0MN7H3W0WFW3Q4IM/_DSC9230_20200624-cascadia-ian-phelps-photography-1920.jpg"},
+    {name:"Paradise", slug:"paradise", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423979-GZHH5TKA38R3RQ2JIDP1/_MG_8237_20200111-paradise-ian-phelps-photography-1920.jpg"},
+    {name:"Embers of Dawn", slug:"embers-of-dawn", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424154-AUJB2J59AV4O1RTSF9EQ/embers-of-dawn-ian-phelps-photography-1920.jpg"},
+    {name:"Grand Range", slug:"grand-range", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120422876-TYX1F8OFW4HTNZ0XNHLE/_MG_5924_20200111-grand-range-ian-phelps-photography-1920.jpg"},
+    {name:"Autumn Bells", slug:"autumn-bells", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423086-BVSHM42GE91IBNF4V7EK/_DSC3139-autumn-bells-ian-phelps-photography-1920.jpg"},
+    {name:"Patagonia", slug:"patagonia", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424053-0YMVMTWGOXMV1VC9P5EY/_DSC5998-patagonia-ian-phelps-photography-1920.jpg"},
+    {name:"Path of Light", slug:"path-of-light", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424309-3K1BIQXSQK2JLXPV6V2U/_DSC1432_20200112-path-of-light-ian-phelps-photography-1920.jpg"},
+    {name:"Enchanted Mirror", slug:"enchanted-mirror", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120422703-TUX7M0IEW5V5F5SMPVGV/_MG_9867-enchanted-mirror-ian-phelps-photography-1920.jpg"},
+    {name:"Serenity", slug:"serenity", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424525-KMYC0SZNKKHQYQN7YVUE/_DSC9489-serenity-ian-phelps-photography-1920.jpg"},
+    {name:"Ephemeral Light", slug:"ephemeral-light", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423549-DRHW0SHXJ8E4X5I6BGB5/_DSC5618-ephemeral-light-ian-phelps-photography-1920.jpg"},
+    {name:"Resplendent Robson", slug:"replendent-robson", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424647-YIUPHKFK0QHFR5DLNFXX/DSC_2723-resplendent-robson-ian-phelps-photography-1920.jpg"},
+    {name:"Fire and Ice", slug:"fire-and-ice", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424759-P7IC4EXWZPEZH5NN4DZ2/_DSC3946-fire-and-ice-ian-phelps-photography-1920.jpg"},
+    {name:"September Skies", slug:"september-skies", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424889-Y3HB0EW22KV4V3LU7ORH/DSC_3882-september-skies-ian-phelps-photography-1920.jpg"},
+    {name:"Kiwanda", slug:"kiwanda", aspect:1.5, maxSize:"40x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423769-H88CGCCQZ2MKXNUMH2LM/DSC_6214-kiwanda-ian-phelps-photography-1920.jpg"},
+  ],
+  wildlife: [
+    {name:"Exodus", slug:"exodus", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423342-7WMWTLHQFGVMKNQSRQ5B/_MG_6869_20200111-exodus-ian-phelps-photography-wm.jpg"},
+    {name:"Pumas of Patagonia", slug:"pumas-of-patagonia", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423915-BXELGQ6HHYTJY6GN7LDE/_DSC3345-pumas-of-patagonia-ian-phelps-photography-1920.jpg"},
+    {name:"Curious Kit", slug:"curious-kit", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423193-4BPVNHKAQZ6V0HR9A4FV/_DSC7056_curious_kit_ian_phelps_photography_1920wm.jpg"},
+    {name:"Stellar Smooch", slug:"stellar-smooch", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423468-HG4PKRFMWWNHQ2UT3D3W/_DSC2078-stellar-smooch-ian-phelps-photography-1920.jpg"},
+    {name:"Vigilant", slug:"vigilant", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424183-I8UZPJVHPBH1RN0XDKOH/_MG_7559-vigilant-ian-phelps-photography-1920.jpg"},
+    {name:"Little Spy", slug:"little-spy", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423623-KN4PJEWMSWX0WM5VFHQ0/little-spy-ian-phelps-photography-1920.jpg"},
+    {name:"Berry Bear", slug:"berry-bear", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423056-7PTNQJRFZ9LVVW2XAZPR/_MG_6125-berry-bear-ian-phelps-photography-1920.jpg"},
+    {name:"Eyes of the San Juan", slug:"eyes-of-the-san-juan", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423263-7RRHPRKP95WQDBHF3WOT/_DSC0827-eyes-of-the-san-juan-ian-phelps-photography-1920.jpg"},
+    {name:"Glacier Guardian", slug:"glacier-guardian", aspect:1.5, maxSize:"30x45", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423450-WU8VBFAPF7IY3CQXLK0F/DSC_3541-glacier-guardian-ian-phelps-photography-1920.jpg"},
+    {name:"Otterly Adorable", slug:"otterly-adorable", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423766-DG9VFBYLRM0NP7MJ1F0F/_DSC1653-otterly-adorable-ian-phelps-photography-1920.jpg"},
+    {name:"Portrait of a Puma", slug:"portrait-of-a-puma", aspect:1.33, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424019-BCYETXKL9ULQAAHGPIJQ/_DSC3495-portrait-of-a-puma-ian-phelps-photogrpahy-1920.jpg"},
+    {name:"Salish Salutation", slug:"Salish-salutation", aspect:1.5, maxSize:"24x36", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423519-FNOXBNKX7WQ5QOUKXNMB/_DSC2050-salish-salutation-ian-phelps-photography-1920.jpg"},
+  ],
+  panoramic: [
+    {name:"Dawn on the North Cascades", slug:"dawn-on-the-north-cascades", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423134-RYPKGXJBVQZULHWNCZQF/_DSC7556_7560-ian-phelps-photography-dawn-on-the-north-cascades-1920.jpg"},
+    {name:"Last Light on Glacier Peak", slug:"last-light-on-glacier-peak", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423715-I8XARMY4RXXVAQG3YVP2/_DSC7292-Last-Light-on-Glacier-Peak-Ian-Phelps-Photography-1920.jpg"},
+    {name:"Autumn Bend", slug:"autumn-bend", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120422969-E0MA3GQTXZ5QPLZL5S62/autumn_bend_ian_phelps_lumachrome_20200110-1920.jpg"},
+    {name:"Winter Wonderland", slug:"winter-wonderland", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424873-OGTXC7Q1R0RBUHDMQ5F5/winter-wonderland-ian-phelps-photography-2500.jpg"},
+    {name:"Valley of Dreams", slug:"valley-of-dreams", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424704-XCIDKRJ39ZQBDLM0JG8N/valley-of-dreams-ian-phelps-photography-1920.jpg"},
+    {name:"North Cascades Reflections", slug:"north-cascades-reflections", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423855-JU7PXOQKNM8EIQG7IBVB/reflections-of-the-north-cascades-ian-phelps-photography-1920.jpg"},
+    {name:"Morning Majesty", slug:"morning-majesty", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120423793-YJAPQVGBOKF0WVF3OVGR/morning-majesty-ian-phelps-photography-1920.jpg"},
+    {name:"Timeless Tetons", slug:"timeless-tetons", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120424602-M7BPYAOZGHRMFWRNS7YP/timeless-tetons-ian-phelps-photography-2500.jpg"},
+    {name:"Dawn at Image Lake", slug:"dawn-at-image-lake", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120422821-VBXATBTNIVF6HXDPGFKH/dawn-at-image-lake-ian-phelps-photography-1920.jpg"},
+    {name:"Autumn Unveiling", slug:"autumn-unveiling", aspect:3.0, maxSize:"20x60", url:"https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/1591120422882-MKF4NF5HXPCCATUVHCTB/autumn-unveiling-ian-phelps-photography-2080.jpg"},
+  ]
+};
+
+// Standard sizes: [label, widthIn, heightIn, isPano]
+const STD_SIZES = [
+  {label:"12×18″",  w:18, h:12, pano:false},
+  {label:"16×24″",  w:24, h:16, pano:false},
+  {label:"20×30″",  w:30, h:20, pano:false},
+  {label:"24×36″",  w:36, h:24, pano:false},
+  {label:"30×45″",  w:45, h:30, pano:false},
+  {label:"40×60″",  w:60, h:40, pano:false},
+  {label:"12×36″",  w:36, h:12, pano:true},
+  {label:"16×48″",  w:48, h:16, pano:true},
+  {label:"20×60″",  w:60, h:20, pano:true},
+];
+
+const MAX_SIZE_ORDER = ["12x18","16x24","20x30","24x36","30x45","40x60","12x36","16x48","20x60"];
+
+function sizeIndex(s){ return MAX_SIZE_ORDER.indexOf(s); }
+
+function sizeAvailable(size, print){
+  const maxIdx = sizeIndex(print.maxSize);
+  const sizeKey = size.pano
+    ? `${size.h}x${size.w}`
+    : `${size.h}x${size.w}`;
+  const thisSizeKey = size.pano
+    ? `${size.h}x${size.w}`
+    : `${Math.min(size.w,size.h)}x${Math.max(size.w,size.h)}`;
+  const idx = MAX_SIZE_ORDER.indexOf(thisSizeKey);
+  if(idx === -1) return false;
+  // Panoramic prints only for panoramic images and vice versa
+  const isPrintPano = print.aspect > 2;
+  if(size.pano && !isPrintPano) return false;
+  if(!size.pano && isPrintPano) return false;
+  return idx <= maxIdx;
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  currentCat: 'landscapes',
+  selectedPrint: CATS.landscapes[0],
+  selectedSize: STD_SIZES[2],
+  printType: 'metal',
+  frameStyle: 'none',
+  scale: 100,
+  shadow: 10,
+  brightness: 100,
+  printX: 0.5,
+  printY: 0.35,
+  roomImg: null,
+  printImg: null,
+  canvasW: 0,
+  canvasH: 0,
+  isDragging: false,
+  dragOX: 0,
+  dragOY: 0,
+  // Calibration
+  pxPerInch: null,       // null = uncalibrated
+  calStep: 0,            // 0=inactive, 1=awaiting pt1, 2=awaiting pt2
+  calPt1: null,          // {x,y} in canvas pixels
+  calPt2: null,
+  refObject: 'letter-long',  // currently selected reference
+};
+
+const REF_OBJECTS = {
+  'letter-long':  { label: 'Letter paper — 11″ long edge',  inches: 11.0 },
+  'letter-short': { label: 'Letter paper — 8.5″ short edge', inches: 8.5 },
+  'a4-long':      { label: 'A4 paper — 297mm long edge',    inches: 11.693 },
+  'a4-short':     { label: 'A4 paper — 210mm short edge',   inches: 8.268 },
+  '12in':         { label: '12″ ruler',                     inches: 12.0 },
+};
+
+const canvas = document.getElementById('room-canvas');
+const ctx = canvas.getContext('2d');
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init(){
+  renderPrintGrid('landscapes');
+  renderSizeGrid();
+  loadPrint(CATS.landscapes[0]);
+}
+
+function switchCat(cat, el){
+  state.currentCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPrintGrid(cat);
+}
+
+function renderPrintGrid(cat){
+  const grid = document.getElementById('print-grid');
+  grid.innerHTML = '';
+  CATS[cat].forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'print-thumb' + (p === state.selectedPrint ? ' selected' : '');
+    d.innerHTML = `<img src="${p.url}" alt="${p.name}" crossorigin="anonymous" loading="lazy"><div class="print-thumb-name">${p.name}</div>`;
+    d.onclick = () => {
+      document.querySelectorAll('.print-thumb').forEach(x => x.classList.remove('selected'));
+      d.classList.add('selected');
+      state.selectedPrint = p;
+      document.getElementById('selected-name').textContent = p.name;
+      document.getElementById('selected-link').href = `https://www.ianphelpsphotography.com/${cat}/${p.slug}`;
+      renderSizeGrid();
+      loadPrint(p);
+    };
+    grid.appendChild(d);
+  });
+}
+
+function renderSizeGrid(){
+  const grid = document.getElementById('size-grid');
+  grid.innerHTML = '';
+  const print = state.selectedPrint;
+  let firstAvail = null;
+  STD_SIZES.forEach(s => {
+    const avail = sizeAvailable(s, print);
+    const isSelected = s === state.selectedSize;
+    const chip = document.createElement('div');
+    chip.className = 'size-chip' + (isSelected ? ' selected' : '') + (!avail ? ' unavailable' : '');
+    chip.innerHTML = `<span class="size-label">${s.label}</span>`;
+    if(!avail){ chip.title = 'Not available for this image'; }
+    if(avail){
+      chip.onclick = () => {
+        document.querySelectorAll('.size-chip').forEach(x => x.classList.remove('selected'));
+        chip.classList.add('selected');
+        state.selectedSize = s;
+        render();
+        updateSizeInfo(s);
+      };
+      if(!firstAvail) firstAvail = {s, chip};
+    }
+    grid.appendChild(chip);
+  });
+  // Auto-select first available if current not available
+  if(!sizeAvailable(state.selectedSize, print) && firstAvail){
+    state.selectedSize = firstAvail.s;
+    firstAvail.chip.classList.add('selected');
+  }
+  updateSizeInfo(state.selectedSize);
+}
+
+function updateSizeInfo(s){
+  const info = document.getElementById('size-info');
+  const txt = document.getElementById('size-info-text');
+  if(s.w >= 45){
+    info.style.display = 'block';
+    txt.innerHTML = `<strong>${s.label}</strong> is a large-format statement piece. Recommended for rooms with ceiling height 9′ or more. ChromaLuxe metal or Lumachrome acrylic recommended for this size.`;
+  } else {
+    info.style.display = 'none';
+  }
+}
+
+function selectPrintType(type, el){
+  state.printType = type;
+  document.querySelectorAll('#print-type-grid .frame-opt').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  if(state.roomImg) render();
+}
+
+function selectFrame(frame, el){
+  state.frameStyle = frame;
+  document.querySelectorAll('#frame-grid .frame-opt').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  if(state.roomImg) render();
+}
+
+function onScale(v){ state.scale = parseInt(v); document.getElementById('scale-val').textContent = v + '%'; if(state.roomImg) render(); }
+function onShadow(v){ state.shadow = parseInt(v); document.getElementById('shadow-val').textContent = v; if(state.roomImg) render(); }
+function onBright(v){ state.brightness = parseInt(v); document.getElementById('bright-val').textContent = v + '%'; if(state.roomImg) render(); }
+
+function loadPrint(p){
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { state.printImg = img; if(state.roomImg) render(); };
+  img.onerror = () => { state.printImg = null; };
+  img.src = p.url;
+}
+
+// ─── ROOM PHOTO ────────────────────────────────────────────────────────────────
+document.getElementById('room-input').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      state.roomImg = img;
+      setupCanvas(img);
+      state.printX = 0.5;
+      state.printY = 0.35;
+      state.pxPerInch = null;
+      state.calStep = 0;
+      document.getElementById('upload-state').style.display = 'none';
+      canvas.style.display = 'block';
+      document.getElementById('wm-overlay').style.display = 'block';
+      document.getElementById('download-btn').disabled = false;
+      document.getElementById('cal-btn').style.display = 'inline-flex';
+      document.getElementById('cal-section').style.display = 'block';
+      updateCalStatus();
+      render();
+      document.getElementById('canvas-hint').textContent = 'Click to place your print, then drag to reposition.';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+  e.target.value = '';
+});
+
+function setupCanvas(img){
+  const maxW = document.getElementById('canvas-area').clientWidth || 700;
+  const maxH = 580;
+  const ar = img.width / img.height;
+  let w = Math.min(maxW, img.width);
+  let h = w / ar;
+  if(h > maxH){ h = maxH; w = h * ar; }
+  state.canvasW = Math.round(w);
+  state.canvasH = Math.round(h);
+  canvas.width = state.canvasW;
+  canvas.height = state.canvasH;
+  canvas.style.width = state.canvasW + 'px';
+  canvas.style.height = state.canvasH + 'px';
+  const oc = document.getElementById('cal-overlay');
+  oc.width = state.canvasW;
+  oc.height = state.canvasH;
+  oc.style.width = state.canvasW + 'px';
+  oc.style.height = state.canvasH + 'px';
+  oc.style.display = 'block';
+}
+
+// ─── RENDER ────────────────────────────────────────────────────────────────────
+function getPrintDims(){
+  const { canvasW, selectedSize, scale } = state;
+  let pw;
+  if(state.pxPerInch){
+    // Calibrated: use real inches × pxPerInch × user scale tweak
+    pw = selectedSize.w * state.pxPerInch * (scale / 100);
+  } else {
+    // Uncalibrated: proportional estimate
+    pw = canvasW * 0.28 * (scale / 100);
+  }
+  let ar = selectedSize.w / selectedSize.h;
+  if(state.printImg && !selectedSize.pano) ar = state.printImg.width / state.printImg.height;
+  if(selectedSize.pano) ar = selectedSize.w / selectedSize.h;
+  const ph = pw / ar;
+  return { pw, ph };
+}
+
+function render(){
+  if(!state.roomImg) return;
+  const { canvasW, canvasH, printX, printY, shadow, brightness, frameStyle } = state;
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // Room image with brightness
+  ctx.save();
+  ctx.filter = `brightness(${brightness}%)`;
+  ctx.drawImage(state.roomImg, 0, 0, canvasW, canvasH);
+  ctx.filter = 'none';
+  ctx.restore();
+
+  if(!state.printImg) return;
+
+  const { pw, ph } = getPrintDims();
+  const cx = printX * canvasW;
+  const cy = printY * canvasH;
+  const x = cx - pw / 2;
+  const y = cy - ph / 2;
+
+  ctx.save();
+
+  // Shadow
+  if(shadow > 0){
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = shadow * 2.5;
+    ctx.shadowOffsetX = shadow * 0.6;
+    ctx.shadowOffsetY = shadow * 1.2;
+  }
+
+  const frameColors = {
+    'thin-black': '#141412',
+    'thin-white': '#f0ede8',
+    'natural': '#a8845a',
+    'mat-white': '#141412',
+    'mat-black': '#2a2a28',
+  };
+
+  if(frameStyle === 'none'){
+    // Metal/acrylic — slight gloss edge
+    ctx.drawImage(state.printImg, x, y, pw, ph);
+    ctx.shadowColor = 'transparent';
+    // Thin edge highlight for metal
+    if(state.printType === 'metal'){
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, y, pw, ph);
+    }
+  } else {
+    const fw = Math.max(3, pw * 0.022);
+    const matW = (frameStyle === 'mat-white' || frameStyle === 'mat-black') ? pw * 0.065 : 0;
+    const fc = frameColors[frameStyle] || '#141412';
+    ctx.fillStyle = fc;
+    ctx.fillRect(x - fw, y - fw, pw + fw * 2, ph + fw * 2);
+    ctx.shadowColor = 'transparent';
+    if(matW > 0){
+      const matColor = frameStyle === 'mat-white' ? '#f4f1ec' : '#1e1e1c';
+      ctx.fillStyle = matColor;
+      ctx.fillRect(x, y, pw, ph);
+      ctx.drawImage(state.printImg, x + matW, y + matW, pw - matW * 2, ph - matW * 2);
+    } else {
+      ctx.drawImage(state.printImg, x, y, pw, ph);
+    }
+  }
+
+  ctx.restore();
+
+  // Watermark
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `300 ${Math.max(10, pw * 0.028)}px 'Cormorant Garamond', Georgia, serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('ianphelpsphotography.com', cx, y + ph - Math.max(6, pw * 0.02));
+  ctx.restore();
+}
+
+// ─── CALIBRATION ──────────────────────────────────────────────────────────────
+const calCanvas = document.getElementById('cal-overlay');
+const calCtx = calCanvas.getContext('2d');
+
+function selectRef(key, el){
+  state.refObject = key;
+  document.querySelectorAll('.ref-opt').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  // If already calibrated, clear so user re-calibrates with new ref
+  if(state.pxPerInch){
+    state.pxPerInch = null;
+    updateCalStatus();
+  }
+}
+
+function startCalibration(){
+  if(!state.roomImg) return;
+  state.calStep = 1;
+  state.calPt1 = null;
+  state.calPt2 = null;
+  const ref = REF_OBJECTS[state.refObject];
+  document.getElementById('cal-banner').style.display = 'flex';
+  document.getElementById('cal-banner-text').innerHTML =
+    `<strong>Step 1 of 2:</strong> Click one end of your ${ref.label}`;
+  calCanvas.classList.add('active');
+  canvas.style.pointerEvents = 'none';
+  document.getElementById('canvas-hint').textContent = '';
+  clearCalOverlay();
+}
+
+function cancelCalibration(){
+  state.calStep = 0;
+  state.calPt1 = null;
+  calCanvas.classList.remove('active');
+  canvas.style.pointerEvents = 'auto';
+  document.getElementById('cal-banner').style.display = 'none';
+  clearCalOverlay();
+  document.getElementById('canvas-hint').textContent = state.pxPerInch
+    ? 'Scale calibrated. Click to place print, drag to reposition.'
+    : 'Click to place your print, then drag to reposition.';
+}
+
+function clearCalOverlay(){
+  calCtx.clearRect(0, 0, calCanvas.width, calCanvas.height);
+}
+
+function drawCalOverlay(){
+  clearCalOverlay();
+  if(!state.calPt1) return;
+  const r = canvas.getBoundingClientRect();
+  const scaleX = state.canvasW / r.width;
+  const scaleY = state.canvasH / r.height;
+
+  // Point 1 crosshair
+  drawCrosshair(calCtx, state.calPt1.x, state.calPt1.y, '#e8c96a');
+
+  if(state.calPt2){
+    drawCrosshair(calCtx, state.calPt2.x, state.calPt2.y, '#e8c96a');
+    // Line between points
+    calCtx.save();
+    calCtx.strokeStyle = '#e8c96a';
+    calCtx.lineWidth = 1.5;
+    calCtx.setLineDash([4, 3]);
+    calCtx.beginPath();
+    calCtx.moveTo(state.calPt1.x, state.calPt1.y);
+    calCtx.lineTo(state.calPt2.x, state.calPt2.y);
+    calCtx.stroke();
+    // Distance label
+    const mx = (state.calPt1.x + state.calPt2.x) / 2;
+    const my = (state.calPt1.y + state.calPt2.y) / 2 - 12;
+    const dx = state.calPt2.x - state.calPt1.x;
+    const dy = state.calPt2.y - state.calPt1.y;
+    const pxDist = Math.round(Math.sqrt(dx*dx + dy*dy));
+    calCtx.setLineDash([]);
+    calCtx.fillStyle = 'rgba(20,20,18,0.7)';
+    calCtx.beginPath();
+    calCtx.roundRect(mx - 34, my - 14, 68, 18, 3);
+    calCtx.fill();
+    calCtx.fillStyle = '#e8c96a';
+    calCtx.font = '500 11px Jost, sans-serif';
+    calCtx.textAlign = 'center';
+    calCtx.fillText(`${pxDist}px`, mx, my - 2);
+    calCtx.restore();
+  }
+}
+
+function drawCrosshair(ctx, x, y, color){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 3;
+  const sz = 10;
+  ctx.beginPath();
+  ctx.moveTo(x - sz, y); ctx.lineTo(x + sz, y);
+  ctx.moveTo(x, y - sz); ctx.lineTo(x, y + sz);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
+function getCalCanvasCoords(e){
+  const r = calCanvas.getBoundingClientRect();
+  const scaleX = state.canvasW / r.width;
+  const scaleY = state.canvasH / r.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - r.left) * scaleX,
+    y: (clientY - r.top) * scaleY,
+  };
+}
+
+calCanvas.addEventListener('click', e => {
+  if(state.calStep === 0) return;
+  const {x, y} = getCalCanvasCoords(e);
+  const ref = REF_OBJECTS[state.refObject];
+
+  if(state.calStep === 1){
+    state.calPt1 = {x, y};
+    state.calStep = 2;
+    document.getElementById('cal-banner-text').innerHTML =
+      `<strong>Step 2 of 2:</strong> Click the opposite end of your ${ref.label}`;
+    drawCalOverlay();
+  } else if(state.calStep === 2){
+    state.calPt2 = {x, y};
+    drawCalOverlay();
+    // Calculate px per inch
+    const dx = state.calPt2.x - state.calPt1.x;
+    const dy = state.calPt2.y - state.calPt1.y;
+    const pxDist = Math.sqrt(dx*dx + dy*dy);
+    state.pxPerInch = pxDist / ref.inches;
+    // Done
+    setTimeout(() => {
+      cancelCalibration();
+      clearCalOverlay();
+      render();
+      updateCalStatus();
+    }, 800);
+  }
+});
+
+calCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  calCanvas.dispatchEvent(new MouseEvent('click', {
+    clientX: e.touches[0].clientX,
+    clientY: e.touches[0].clientY
+  }));
+}, {passive: false});
+
+function updateCalStatus(){
+  const badge = document.getElementById('cal-status-badge');
+  const infoBox = document.getElementById('cal-info-box');
+  const infoText = document.getElementById('cal-info-text');
+  const calBtn = document.getElementById('cal-btn');
+  const calBtnLabel = document.getElementById('cal-btn-label');
+
+  if(state.pxPerInch){
+    badge.className = 'cal-badge';
+    badge.textContent = '✓ Calibrated';
+    infoBox.className = 'cal-info-box';
+    const ref = REF_OBJECTS[state.refObject];
+    infoText.textContent = `Scale set using ${ref.label}. Print sizes now reflect true dimensions. Use the Scale slider for fine-tuning or to match hanging height.`;
+    calBtn.classList.add('active-cal');
+    calBtnLabel.textContent = 'Re-calibrate';
+  } else {
+    badge.className = 'cal-badge uncal';
+    badge.textContent = 'Not calibrated';
+    infoBox.className = 'cal-info-box uncal-box';
+    infoText.textContent = 'Select your reference object, then click "Calibrate Scale" below the image to mark its edges.';
+    calBtn.classList.remove('active-cal');
+    calBtnLabel.textContent = 'Calibrate Scale';
+  }
+}
+
+
+function getCanvasCoords(e){
+  const r = canvas.getBoundingClientRect();
+  const scaleX = state.canvasW / r.width;
+  const scaleY = state.canvasH / r.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    nx: ((clientX - r.left) * scaleX) / state.canvasW,
+    ny: ((clientY - r.top) * scaleY) / state.canvasH,
+  };
+}
+
+function isOverPrint(nx, ny){
+  if(!state.printImg) return false;
+  const { pw, ph } = getPrintDims();
+  const halfW = pw / 2 / state.canvasW;
+  const halfH = ph / 2 / state.canvasH;
+  return Math.abs(nx - state.printX) < halfW && Math.abs(ny - state.printY) < halfH;
+}
+
+canvas.addEventListener('click', e => {
+  if(state.calStep > 0) return;
+  if(state.isDragging) return;
+  const {nx, ny} = getCanvasCoords(e);
+  state.printX = nx;
+  state.printY = ny;
+  render();
+  document.getElementById('canvas-hint').textContent = 'Drag the print to reposition it.';
+});
+
+canvas.addEventListener('mousedown', e => {
+  if(state.calStep > 0) return;
+  const {nx, ny} = getCanvasCoords(e);
+  if(isOverPrint(nx, ny)){
+    state.isDragging = true;
+    state.dragOX = nx - state.printX;
+    state.dragOY = ny - state.printY;
+    canvas.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if(!state.isDragging) return;
+  const {nx, ny} = getCanvasCoords(e);
+  state.printX = Math.max(0.02, Math.min(0.98, nx - state.dragOX));
+  state.printY = Math.max(0.02, Math.min(0.98, ny - state.dragOY));
+  render();
+});
+
+canvas.addEventListener('mouseup', () => { state.isDragging = false; canvas.style.cursor = 'crosshair'; });
+canvas.addEventListener('mouseleave', () => { state.isDragging = false; canvas.style.cursor = 'crosshair'; });
+
+canvas.addEventListener('touchstart', e => {
+  if(state.calStep > 0) return;
+  e.preventDefault();
+  const {nx, ny} = getCanvasCoords(e);
+  if(isOverPrint(nx, ny)){
+    state.isDragging = true;
+    state.dragOX = nx - state.printX;
+    state.dragOY = ny - state.printY;
+  } else {
+    state.printX = nx; state.printY = ny; render();
+  }
+}, {passive:false});
+
+canvas.addEventListener('touchmove', e => {
+  if(!state.isDragging) return;
+  e.preventDefault();
+  const {nx, ny} = getCanvasCoords(e);
+  state.printX = Math.max(0.02, Math.min(0.98, nx - state.dragOX));
+  state.printY = Math.max(0.02, Math.min(0.98, ny - state.dragOY));
+  render();
+}, {passive:false});
+
+canvas.addEventListener('touchend', () => { state.isDragging = false; });
+
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
+function resetPosition(){
+  state.printX = 0.5; state.printY = 0.35;
+  document.getElementById('scale-slider').value = 100;
+  state.scale = 100;
+  document.getElementById('scale-val').textContent = '100%';
+  if(state.roomImg) render();
+}
+
+function clearCalibration(){
+  state.pxPerInch = null;
+  state.calStep = 0;
+  cancelCalibration();
+  updateCalStatus();
+  if(state.roomImg) render();
+}
+
+function downloadImage(){
+  if(!state.roomImg){ alert('Please upload a room photo first.'); return; }
+  const link = document.createElement('a');
+  const printName = state.selectedPrint.name.toLowerCase().replace(/\s+/g, '-');
+  link.download = `ian-phelps-${printName}-preview.jpg`;
+  link.href = canvas.toDataURL('image/jpeg', 0.93);
+  link.click();
+}
+
+init();
+</script>
+</body>
+</html>
