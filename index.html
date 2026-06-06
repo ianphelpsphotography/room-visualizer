@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>See It On Your Wall — Ian Phelps Photography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0e0e;--bg2:#161616;--bg3:#1e1e1e;
+  --border:#2a2a2a;--border2:#333;
+  --text:#e8e4de;--text2:#a09890;--text3:#5a5450;
+  --gold:hsla(48,100%,50%,0.7);--gold2:hsla(48,100%,50%,0.85);--gold-dim:hsla(48,100%,50%,0.1);
+  --green:#4a7c5c;--green-lt:#7ab894;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-sans:'Raleway',system-ui,sans-serif;
+  --r:3px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);font-size:13px;line-height:1.6;overflow-x:hidden}
+
+header{background:var(--bg);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{font-family:var(--font-serif);font-size:18px;font-weight:400;letter-spacing:0.06em;color:var(--text)}
+.logo-sub{font-size:12px;color:var(--text3);margin-left:8px;font-weight:300;letter-spacing:0.04em}
+header a{margin-left:auto;font-size:10px;color:var(--gold2);text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
+header a:hover{color:var(--text)}
+
+.layout{display:grid;grid-template-columns:1fr 320px;min-height:calc(100vh - 49px)}
+
+.canvas-panel{padding:20px;display:flex;flex-direction:column;gap:12px}
+.canvas-area{position:relative;background:#080808;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-height:340px;display:flex;align-items:center;justify-content:center;cursor:crosshair;flex:1}
+#room-canvas{display:block;max-width:100%;max-height:560px}
+#cal-overlay{display:none;position:absolute;top:0;left:0;pointer-events:none}
+#cal-overlay.active{pointer-events:all;cursor:crosshair}
+
+.upload-state{text-align:center;padding:28px 20px;color:var(--text3);pointer-events:none;width:100%;max-width:520px}
+.upload-state svg{display:block;margin:0 auto 14px;opacity:0.25}
+.upload-state h2{font-family:var(--font-serif);font-size:22px;font-weight:400;color:var(--text2);margin-bottom:6px}
+.upload-state p{font-size:12px;line-height:1.7;max-width:300px;margin:0 auto 18px;color:var(--text3);font-weight:300}
+.upload-state .btn-row{pointer-events:all;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+
+.template-label{font-size:9px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;font-weight:600;margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.template-label::before,.template-label::after{content:'';flex:1;height:1px;background:var(--border2)}
+
+.template-rooms{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;pointer-events:all}
+.room-cat{display:flex;flex-direction:column;gap:4px;align-items:center}
+.room-cat-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;font-weight:500}
+.room-variants{display:flex;gap:4px}
+.room-thumb{cursor:pointer;border:1.5px solid var(--border2);border-radius:var(--r);overflow:hidden;background:var(--bg3);transition:border-color .15s;width:68px;flex-shrink:0}
+.room-thumb:hover{border-color:var(--text3)}
+.room-thumb.active-room{border-color:var(--gold)}
+.room-thumb img{display:block;width:100%;height:44px;object-fit:cover;background:var(--bg3)}
+.room-thumb-label{font-size:8px;padding:2px 4px;color:var(--text3);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.cal-banner{position:absolute;top:0;left:0;right:0;background:rgba(10,10,10,0.92);color:var(--text);padding:10px 16px;display:none;align-items:center;gap:10px;z-index:20}
+.cal-banner strong{color:var(--gold);font-weight:500}
+.cal-cancel{margin-left:auto;font-size:11px;color:var(--text3);cursor:pointer;background:none;border:none;font-family:var(--font-sans);text-decoration:underline}
+.cal-cancel:hover{color:var(--text)}
+
+.wm-overlay{position:absolute;bottom:10px;right:12px;font-family:var(--font-serif);font-size:11px;color:rgba(255,255,255,0.18);pointer-events:none;display:none}
+
+.canvas-hint{font-size:11px;color:var(--text3);font-weight:300;letter-spacing:0.02em;text-align:center;min-height:16px}
+.canvas-actions{display:flex;gap:7px;flex-wrap:wrap}
+
+.btn{padding:8px 14px;font-family:var(--font-sans);font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;background:var(--bg2);color:var(--text2);transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--bg3);color:var(--text);border-color:var(--text3)}
+.btn svg{width:13px;height:13px;flex-shrink:0}
+.btn.primary{background:var(--gold-dim);color:var(--gold2);border-color:hsla(48,100%,50%,0.25)}
+.btn.primary:hover{background:hsla(48,100%,50%,0.18);border-color:var(--gold)}
+.btn.cal-btn{border-color:var(--green);color:var(--green-lt)}
+.btn.cal-btn:hover{background:rgba(74,124,92,0.15)}
+.btn.cal-btn.calibrated{background:rgba(74,124,92,0.2)}
+.btn:disabled{opacity:0.3;cursor:not-allowed;pointer-events:none}
+
+.ctrl-panel{background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.ctrl-panel::-webkit-scrollbar{width:3px}
+.ctrl-panel::-webkit-scrollbar-track{background:var(--bg2)}
+.ctrl-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.ctrl-section{padding:16px;border-bottom:1px solid var(--border)}
+.ctrl-section:last-child{border-bottom:none}
+
+.section-label{font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+
+.cat-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.cat-tab{flex:1;padding:7px 3px;font-size:9px;font-family:var(--font-sans);font-weight:500;letter-spacing:0.05em;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--text3);transition:all .15s}
+.cat-tab:not(:last-child){border-right:1px solid var(--border2)}
+.cat-tab.active{background:var(--text);color:var(--bg)}
+.cat-tab:hover:not(.active){color:var(--text2);background:var(--bg3)}
+
+/* Print grid uses canvas thumbnails */
+.print-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-height:200px;overflow-y:auto;padding-right:2px}
+.print-grid::-webkit-scrollbar{width:3px}
+.print-grid::-webkit-scrollbar-track{background:var(--bg2)}
+.print-grid::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.p-thumb{cursor:pointer;border:1.5px solid transparent;border-radius:var(--r);overflow:hidden;transition:border-color .15s;background:var(--bg3);position:relative}
+.p-thumb:hover{border-color:var(--text3)}
+.p-thumb.selected{border-color:var(--gold)}
+.p-thumb canvas{width:100%;height:56px;display:block;background:var(--bg3)}
+.p-thumb-name{font-size:9px;padding:3px 4px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.selected-print-row{margin-top:10px}
+.selected-name{font-family:var(--font-serif);font-size:15px;font-weight:400;color:var(--text);margin-bottom:3px}
+.selected-link{font-size:10px;color:var(--gold);text-decoration:none;letter-spacing:0.08em;text-transform:uppercase;font-weight:500}
+.selected-link:hover{color:var(--text)}
+
+.size-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.size-chip{padding:6px 3px;font-size:10px;font-family:var(--font-sans);font-weight:400;text-align:center;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;color:var(--text2);background:var(--bg3);transition:all .15s}
+.size-chip:hover:not(.unavail){border-color:var(--gold);color:var(--gold)}
+.size-chip.selected{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:500}
+.size-chip.unavail{color:var(--text3);cursor:not-allowed;text-decoration:line-through;opacity:0.4}
+
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.opt-card{padding:8px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;background:var(--bg3)}
+.opt-card:hover{border-color:var(--text3)}
+.opt-card.selected{border-color:var(--gold);background:var(--gold-dim)}
+.opt-swatch{width:26px;height:18px;border-radius:2px;flex-shrink:0;border:1px solid var(--border2)}
+.opt-label{font-size:10px;color:var(--text2);line-height:1.3;font-weight:400}
+.opt-card.selected .opt-label{color:var(--text)}
+
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.slider-row:last-child{margin-bottom:0}
+.slider-label{font-size:10px;color:var(--text3);font-weight:400;min-width:54px;letter-spacing:0.04em;text-transform:uppercase}
+input[type=range]{flex:1;-webkit-appearance:none;height:2px;background:var(--border2);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--text);cursor:pointer;border:2px solid var(--bg2);box-shadow:0 0 0 1px var(--text3)}
+.slider-val{font-size:11px;color:var(--text2);min-width:34px;text-align:right;font-weight:300}
+
+.cal-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-left:6px}
+.cal-badge.ok{background:rgba(74,124,92,0.2);color:var(--green-lt)}
+.cal-badge.no{background:rgba(90,84,80,0.3);color:var(--text3)}
+
+.ref-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.ref-opt{padding:4px 9px;font-size:10px;border:1px solid var(--border2);border-radius:20px;cursor:pointer;background:var(--bg3);color:var(--text3);font-family:var(--font-sans);transition:all .15s}
+.ref-opt:hover{border-color:var(--gold);color:var(--text2)}
+.ref-opt.selected{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+.info-box{border-radius:var(--r);padding:9px 11px;margin-top:8px}
+.info-box.cal-ok{background:rgba(74,124,92,0.1);border:1px solid rgba(74,124,92,0.25)}
+.info-box.cal-ok p{font-size:10px;color:var(--green-lt);line-height:1.6;font-weight:300}
+.info-box.cal-no{background:var(--gold-dim);border:1px solid hsla(48,100%,50%,0.18)}
+.info-box.cal-no p{font-size:10px;color:var(--text3);line-height:1.6;font-weight:300}
+.info-box.size-lg{background:var(--gold-dim);border:1px solid hsla(48,100%,50%,0.18)}
+.info-box.size-lg p{font-size:10px;color:var(--gold);line-height:1.6;font-weight:300}
+
+.footer-note{font-size:10px;color:var(--text3);line-height:1.7;font-weight:300}
+
+@media(max-width:760px){
+  .layout{grid-template-columns:1fr}
+  .ctrl-panel{border-left:none;border-top:1px solid var(--border)}
+  .canvas-panel{padding:12px}
+  header{padding:12px 16px}
+  header a{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Ian Phelps Photography<span class="logo-sub">— See It On Your Wall</span></div>
+  <a href="https://www.ianphelpsphotography.com" target="_blank">Shop Prints ↗</a>
+</header>
+
+<div class="layout">
+  <div class="canvas-panel">
+    <div class="canvas-area" id="canvas-area">
+      <div id="upload-state" class="upload-state">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <h2>See it on your wall</h2>
+        <p>Upload a photo of your room, or choose a template space below.</p>
+        <div class="btn-row">
+          <button class="btn primary" onclick="document.getElementById('room-input').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Your Photo
+          </button>
+        </div>
+        <div class="template-label">Template Rooms</div>
+        <div class="template-rooms" id="template-rooms"></div>
+      </div>
+      <canvas id="room-canvas" style="display:none"></canvas>
+      <canvas id="cal-overlay"></canvas>
+      <div class="cal-banner" id="cal-banner">
+        <span id="cal-banner-text"><strong>Step 1 of 2:</strong> Click one edge of your reference object</span>
+        <button class="cal-cancel" onclick="cancelCalibration()">Cancel</button>
+      </div>
+      <div class="wm-overlay" id="wm-overlay">ianphelpsphotography.com</div>
+    </div>
+    <p class="canvas-hint" id="canvas-hint"></p>
+    <div class="canvas-actions">
+      <button class="btn" onclick="document.getElementById('room-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        New Photo
+      </button>
+      <button class="btn" id="template-btn" onclick="showTemplateChooser()" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Rooms
+      </button>
+      <button class="btn" onclick="resetPosition()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset
+      </button>
+      <button class="btn cal-btn" id="cal-btn" onclick="startCalibration()" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        <span id="cal-btn-label">Calibrate Scale</span>
+      </button>
+      <button class="btn primary" id="dl-btn" onclick="downloadImage()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Save Image
+      </button>
+    </div>
+    <input type="file" id="room-input" accept="image/*" style="display:none">
+  </div>
+
+  <div class="ctrl-panel">
+    <div class="ctrl-section">
+      <div class="section-label">Choose a Print</div>
+      <div class="cat-tabs">
+        <button class="cat-tab active" onclick="switchCat('new',this)">New</button>
+        <button class="cat-tab" onclick="switchCat('landscapes',this)">Landscapes</button>
+        <button class="cat-tab" onclick="switchCat('wildlife',this)">Wildlife</button>
+        <button class="cat-tab" onclick="switchCat('panoramic',this)">Panoramic</button>
+        <button class="cat-tab" onclick="switchCat('woven',this)">Woven</button>
+      </div>
+      <div class="print-grid" id="print-grid"></div>
+      <div class="selected-print-row">
+        <div class="selected-name" id="sel-name">Spirit of Shi Shi</div>
+        <a class="selected-link" id="sel-link" href="https://www.ianphelpsphotography.com/new-releases/spirit-of-shi-shi" target="_blank">View &amp; Purchase →</a>
+      </div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="section-label">Print Size</div>
+      <div class="size-grid" id="size-grid"></div>
+      <div class="info-box size-lg" id="size-info" style="display:none"><p id="size-info-text"></p></div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="section-label">Print Type</div>
+      <div class="opt-grid">
+        <div class="opt-card selected" onclick="selOpt(this,'printType','metal')">
+          <div class="opt-swatch" style="background:linear-gradient(135deg,#3a3a3a,#5a5a5a)"></div>
+          <div class="opt-label">ChromaLuxe HD Metal</div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'printType','acrylic')">
+          <div class="opt-swatch" style="background:linear-gradient(135deg,#2a2a2a,#404040);border-color:#444"></div>
+          <div class="opt-label">Lumachrome HD Acrylic</div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'printType','paper')">
+          <div class="opt-swatch" style="background:#2a2520"></div>
+          <div class="opt-label">Fine Art Loose Print</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="section-label">Frame Style</div>
+      <div class="opt-grid">
+        <div class="opt-card selected" onclick="selOpt(this,'frame','none')">
+          <div class="opt-swatch" style="background:transparent;border:1px dashed #444"></div>
+          <div class="opt-label">No Frame<br><span style="font-size:9px;color:var(--text3)">metal / acrylic</span></div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'frame','black')">
+          <div class="opt-swatch" style="background:#080808;border-color:#333"></div>
+          <div class="opt-label">Thin Black Frame</div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'frame','white')">
+          <div class="opt-swatch" style="background:#e8e4de;border-color:#666"></div>
+          <div class="opt-label">Thin White Frame</div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'frame','natural')">
+          <div class="opt-swatch" style="background:#8a6840;border-color:#8a6840"></div>
+          <div class="opt-label">Natural Wood</div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'frame','mat-white')">
+          <div class="opt-swatch" style="background:#e8e4de;border:3px solid #0a0a0a"></div>
+          <div class="opt-label">White Mat + Black Frame</div>
+        </div>
+        <div class="opt-card" onclick="selOpt(this,'frame','mat-black')">
+          <div class="opt-swatch" style="background:#1a1a1a;border:3px solid #3a3a3a"></div>
+          <div class="opt-label">Black Mat + Dark Frame</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-section" id="cal-section" style="display:none">
+      <div class="section-label">Scale Calibration <span class="cal-badge no" id="cal-badge">Not Calibrated</span></div>
+      <p style="font-size:10px;color:var(--text3);line-height:1.6;margin-bottom:10px;font-weight:300">Tape a sheet of letter paper to your wall before photographing, then mark its edges here. Template rooms are pre-calibrated.</p>
+      <div class="section-label" style="margin-bottom:6px">Reference Object</div>
+      <div class="ref-row">
+        <button class="ref-opt selected" onclick="selRef('letter-long',this)">Letter 11″</button>
+        <button class="ref-opt" onclick="selRef('letter-short',this)">Letter 8.5″</button>
+        <button class="ref-opt" onclick="selRef('a4-long',this)">A4 297mm</button>
+        <button class="ref-opt" onclick="selRef('a4-short',this)">A4 210mm</button>
+        <button class="ref-opt" onclick="selRef('12in',this)">12″ Ruler</button>
+      </div>
+      <div class="info-box cal-no" id="cal-info-box">
+        <p id="cal-info-text">Select your reference object then click "Calibrate Scale" below the image.</p>
+      </div>
+    </div>
+
+    <div class="ctrl-section">
+      <div class="section-label">Adjustments</div>
+      <div class="slider-row">
+        <span class="slider-label">Scale</span>
+        <input type="range" id="scale-sl" min="15" max="220" value="100" step="1" oninput="onSlider('scale',this.value,'scale-val','%')">
+        <span class="slider-val" id="scale-val">100%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Shadow</span>
+        <input type="range" id="shadow-sl" min="0" max="24" value="10" step="1" oninput="onSlider('shadow',this.value,'shadow-val','')">
+        <span class="slider-val" id="shadow-val">10</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Brightness</span>
+        <input type="range" id="bright-sl" min="60" max="140" value="100" step="1" oninput="onSlider('brightness',this.value,'bright-val','%')">
+        <span class="slider-val" id="bright-val">100%</span>
+      </div>
+    </div>
+
+    <div class="ctrl-section">
+      <p class="footer-note">For accurate sizing in your own photo, tape a letter sheet to your wall, then use Calibrate Scale to mark its edges. Template rooms are pre-calibrated.<br><br>All prints custom made — please allow 3–4 weeks for delivery.</p>
+      <div style="margin-top:10px">
+        <a href="https://www.ianphelpsphotography.com/prints-and-licensing" target="_blank" class="btn" style="font-size:9px">About Print Types ↗</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SQBASE='https://images.squarespace-cdn.com/content/v1/528c58fae4b090f62f2b4012/';
+const UNBASE='https://images.unsplash.com/';
+function sqThumb(img){return SQBASE+img+'?format=500w';}
+function sqFull(img){return SQBASE+img+'?format=2000w';}
+function unImg(id,w){return `${UNBASE}photo-${id}?w=${w||1200}&auto=format&fit=crop&q=80`;}
+
+// ── TEMPLATE ROOMS ─────────────────────────────────────────────────────────
+// Unsplash free-license photo IDs, 2-3 variants per room
+// pxPerInch calibrated for ~800px canvas width representing ~120" (10ft) wall
+const ROOMS=[
+  {id:'living',label:'Living Room',pxPerInch:6.0,variants:[
+    {id:'R-LCC3NjL9Y',label:'Warm neutral',credit:'Spacejoy'},
+    {id:'uPl-p4bRYQs',label:'Light & airy',credit:'Minh Pham'},
+    {id:'N_Y88TWmGwA',label:'Soft grey',credit:'Kam Idris'},
+  ]},
+  {id:'bedroom',label:'Bedroom',pxPerInch:6.0,variants:[
+    {id:'Jkl_-7NyYcw',label:'Warm tones',credit:'Spl Interiors'},
+    {id:'1Rm9GLNV6aA',label:'Neutral linen',credit:'Hutomo Abrianto'},
+    {id:'y3aP9sTGHBo',label:'Light minimal',credit:'Alexandra Gorn'},
+  ]},
+  {id:'bathroom',label:'Bathroom',pxPerInch:5.5,variants:[
+    {id:'Dk_o7KQyGkI',label:'White marble',credit:'Lotus Design'},
+    {id:'2gYsZUmockw',label:'Modern spa',credit:'Jared Rice'},
+    {id:'ouyjDk-KdfY',label:'Clean stone',credit:'Sven Brandsma'},
+  ]},
+  {id:'dining',label:'Dining Room',pxPerInch:6.0,variants:[
+    {id:'xUXGHPbsYCo',label:'Warm wood',credit:'Collov Home'},
+    {id:'Bs2jGUWu4c8',label:'Modern dark',credit:'Roberto Nickson'},
+    {id:'o-ubWHV29Ag',label:'Natural light',credit:'Katja Rooke'},
+  ]},
+  {id:'nursery',label:'Nursery',pxPerInch:5.5,variants:[
+    {id:'7Sz71zuuZoo',label:'Soft neutral',credit:'Picsea'},
+    {id:'JbrlMObZUG0',label:'Warm white',credit:'Jens Johnsson'},
+    {id:'kd3qFj0aXSg',label:'Light minimal',credit:'Picsea'},
+  ]},
+];
+
+let activeRoomEl=null;
+
+function buildTemplateButtons(){
+  const wrap=document.getElementById('template-rooms');
+  ROOMS.forEach(room=>{
+    const cat=document.createElement('div');cat.className='room-cat';
+    const lbl=document.createElement('div');lbl.className='room-cat-label';lbl.textContent=room.label;
+    const variants=document.createElement('div');variants.className='room-variants';
+    room.variants.forEach((v,i)=>{
+      const btn=document.createElement('div');btn.className='room-thumb';
+      const img=document.createElement('img');
+      img.src=unImg(v.id,200);img.alt=`${room.label} — ${v.label}`;
+      img.onerror=()=>{img.style.background='#2a2a28';img.style.display='block';};
+      const lbl2=document.createElement('div');lbl2.className='room-thumb-label';lbl2.textContent=v.label;
+      btn.appendChild(img);btn.appendChild(lbl2);
+      btn.onclick=()=>loadTemplateRoom(room,v,btn);
+      variants.appendChild(btn);
+    });
+    cat.appendChild(lbl);cat.appendChild(variants);wrap.appendChild(cat);
+  });
+}
+
+function loadTemplateRoom(room,variant,btnEl){
+  if(activeRoomEl)activeRoomEl.classList.remove('active-room');
+  activeRoomEl=btnEl;btnEl.classList.add('active-room');
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=()=>{
+    S.roomImg=img;S.pxPerInch=room.pxPerInch;S.calStep=0;S.px=0.5;S.py=0.38;S.isTemplate=true;
+    setupCanvas(img);
+    document.getElementById('upload-state').style.display='none';
+    canvas.style.display='block';
+    document.getElementById('wm-overlay').style.display='block';
+    document.getElementById('dl-btn').disabled=false;
+    document.getElementById('cal-btn').style.display='inline-flex';
+    document.getElementById('template-btn').style.display='inline-flex';
+    document.getElementById('cal-section').style.display='block';
+    updateCalStatus();render();
+    setHint(`${room.label} — ${variant.label}. Click to place print, drag to reposition.`);
+  };
+  img.onerror=()=>{setHint('Could not load room image. Please try another or upload your own.');};
+  img.src=unImg(variant.id,1200);
+}
+
+function showTemplateChooser(){
+  document.getElementById('upload-state').style.display='block';
+  canvas.style.display='none';
+  document.getElementById('wm-overlay').style.display='none';
+  document.getElementById('template-btn').style.display='none';
+  document.getElementById('cal-btn').style.display='none';
+  document.getElementById('dl-btn').disabled=true;
+  document.getElementById('cal-section').style.display='none';
+  setHint('');
+}
+
+// ── PRINT DATA ────────────────────────────────────────────────────────────────
+const CATS={
+  new:{label:'New Releases',path:'new-releases',prints:[
+    {n:'Spirit of Shi Shi',s:'spirit-of-shi-shi',img:'_DSC0904-spirits-of-shi-shi-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Beautiful Baker',s:'beautiful-baker',img:'_DSC2520-beautiful-baker-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Sneffels Splendor',s:'sneffels-splendor',img:'_DSC9464-sneffels-splendor-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Emerald Oasis',s:'emerald-oasis',img:'DSC_8448_oregon-oasis-ian-phelps-photography-1920_wm.jpg',max:'40x60',ar:1.5},
+    {n:'Gift of Light',s:'gift-of-light',img:'_DSC4436-gift-of-light-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Flow of Life',s:'flow-of-life',img:'_DSC2277-flow-of-life-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Cascade Gem',s:'cascade-gem',img:'_DSC5021_DSC5022-gem-of-the-cascades-ian-phelps-photogrpahy-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Waves of Gold',s:'waves-of-gold',img:'_DSC6847-waves-of-gold-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Alpine Serenity',s:'alpine-serenity',img:'alpine-serenity-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Verdant',s:'verdant',img:'_DSC8978_8979-verdant-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Grand',s:'grand',img:'_DSC8652-grand-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Snowy Elegance',s:'snowy-elegance',img:'_DSC0738-snowy-elegance-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Tapestry of Autumn',s:'tapestry-of-autumn',img:'_DSC4053-tapestry-of-autumn-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Center Stage',s:'center-stage',img:'DSC_0744_2x1-center-stage-bw-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'Baker Bliss',s:'baker-bliss',img:'baker-bliss-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'Sound of Sky and Sea',s:'sound-of-sky-and-sea',img:'DSC_7971-sound-of-sky-and-sea-ian-phelps-photogrpahy-1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'Southern Pickets',s:'southern-pickets',img:'DSC7566_7567-Southern-Pickets-Ian-Phelps-Photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Sea of Light & Shadow',s:'sea-of-light-and-shadow',img:'_DSC9195-sea-of-light-and-shadow-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'Royalty',s:'royalty',img:'royalty-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Early Winters Spires',s:'enchantment-8plpy',img:'_MG_6420-early-winters-spires-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Snowy Dreams',s:'snowy-dreams',img:'_MG_5087_arctic_reverie_ian_phelps_photography_1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Enchantment',s:'enchantment',img:'_MG_9893-enchantment-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Sea of Gold',s:'sea-of-gold',img:'_DSC6888-sea-of-gold-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Dusk at Image Lake',s:'dusk-at-image-lake',img:'_DSC7292_v3_1920wm_ian_phelps.jpg',max:'40x60',ar:1.5},
+    {n:'Sound of Dawn',s:'sound-of-dawn',img:'DSC_7870-sound-of-dawn-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'September Stillness',s:'september-stillness',img:'_MG_9131-september-stillness-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Moon and Massif',s:'moon-and-massif',img:'_DSC5879-moon-an-massif-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Timeless Tides',s:'timeless-tides',img:'_MG_7428-timeless-tides-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Wonderland',s:'wonderland',img:'_MG_8220-20230801-ian-phelps-wonderland-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Backcountry Bliss',s:'backcountry-bliss',img:'_DSC7176-backcountry-bliss-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+  ]},
+  landscapes:{label:'Landscapes',path:'landscapes',prints:[
+    {n:'Cascadia',s:'cascadia',img:'_DSC9230_20200624-cascadia-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Paradise',s:'paradise',img:'_MG_8237_20200111-paradise-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Embers of Dawn',s:'embers-of-dawn',img:'embers-of-dawn-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Grand Range',s:'grand-range',img:'_MG_5924_20200111-grand-range-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Autumn Bells',s:'autumn-bells',img:'_DSC3139-autumn-bells-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Patagonia',s:'patagonia',img:'_DSC5998-patagonia-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Path of Light',s:'path-of-light',img:'_DSC1432_20200112-path-of-light-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Enchanted Mirror',s:'enchanted-mirror',img:'_MG_9867-enchanted-mirror-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Valley of Green & Gold',s:'valley-of-green-and-gold',img:'_MG_1470-valley-of-green-and-gold-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Beacon of Dawn',s:'beacon-of-dawn',img:'_MG_0596-beacon-of-dawn-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Serenity',s:'serenity',img:'_DSC9489-serenity-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Ephemeral Light',s:'grand-range-mfgcn',img:'_DSC5618-ephemeral-light-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Resplendent Robson',s:'replendent-robson',img:'DSC_2723-resplendent-robson-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Fire and Ice',s:'fire-and-ice',img:'_DSC3946-fire-and-ice-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Kiwanda',s:'kiwanda',img:'DSC_6214-kiwanda-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Emerald Twilight',s:'emerald-twilight',img:'_MG_1305_5x9-emerald-twilight-1920wm.jpg',max:'30x45',ar:1.78},
+    {n:'September Skies',s:'september-skies',img:'DSC_3882-september-skies-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Mountain of Fire & Ice',s:'mountain-of-fire-and-ice',img:'_DSC0079-mountain-of-fire-and-ice-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Among Giants',s:'among-giants',img:'DSC_1565-among-giants-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Prismatic',s:'prismatic',img:'_DSC9693-prismatic-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Gold',s:'gold',img:'_DSC9238_V3-gold-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Valley of Silence',s:'valley-of-silence',img:'DSC_2893-valley-of-silence-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Morning Glory',s:'morning-glory',img:'_MG_3391-morning-glory-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Oneonta',s:'oneonta',img:'DSC_8346_20230612-oneonta-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Autumn Palette',s:'autumn-palette',img:'_DSC4201-autumn-palette-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Grand Glory',s:'grand-glory',img:'_MG_2897-grand-glory-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Gentle Giants',s:'gentle-giants',img:'DSC_1501-gentle-giants-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Stand Out',s:'stand-out',img:'stand_out_ian_phelps_photography_1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'Shade of Autumn',s:'shade-of-autumn',img:'_MG_1831-shade-of-autumn-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Maple and Fir',s:'maple-and-fir',img:'DSC_5487-maple-and-fir-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'House on Fire',s:'house-on-fire',img:'_DSC5134-house-on-fire-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Alpine Hues',s:'alpine-hues',img:'_DSC8607-alpine-hues-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Cracked',s:'cracked',img:'cracked-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Seasons Divide',s:'seasons-divide',img:'_MG_2201-seasons-divide-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Colorful Colorado',s:'colorful-colorado',img:'colorful-colorado-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Delicate Afterglow',s:'delicate-afterglow',img:'DSC_5055-delicate-afterglow-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Arch of Dawn',s:'arch-of-dawn',img:'DSC_5305-arch-of-dawn-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Spring Falls',s:'spring-falls',img:'DSC_8150-spring-falls-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Autumn Refuge',s:'autumn-refuge',img:'_MG_2294-autumn-refuge-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Sea of Change',s:'seas-of-change',img:'_DSC2565-sea-of-change-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Big Sky Brilliance',s:'big-sky-brilliance',img:'DSC_3673-big-sky-brilliance-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'South Falls',s:'south-falls',img:'DSC_5623-south-falls-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Window Arch',s:'window-arch',img:'_MG_2985-window-arch-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Summits of Shadow & Light',s:'summits-of-shadow-and-light',img:'_DSC9163_2x1-summits-of-shadow-and-light-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:2.0},
+    {n:'Light Breaks',s:'light-breaks1',img:'DSC_4510-light-breaks-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+    {n:'Spirit Island',s:'spirit-island',img:'spirit-island-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:1.5},
+  ]},
+  wildlife:{label:'Wildlife',path:'wildlife',prints:[
+    {n:'Exodus',s:'exodus',img:'_MG_6869_20200111-exodus-ian-phelps-photography-wm.jpg',max:'30x45',ar:1.5},
+    {n:'Pumas of Patagonia',s:'pumas-of-patagonia',img:'_DSC3345-pumas-of-patagonia-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Curious Kit',s:'curious-kit',img:'_DSC7056_curious_kit_ian_phelps_photography_1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Stellar Smooch',s:'stellar-smooch',img:'_DSC2078-stellar-smooch-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Vigilant',s:'vigilant',img:'_MG_7559-vigilant-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Little Spy',s:'little-spy',img:'little-spy-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Berry Bear',s:'berry-bear',img:'_MG_6125-berry-bear-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Eyes of the San Juan',s:'eyes-of-the-san-juan',img:'_DSC0827-eyes-of-the-san-juan-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Moment of Transition',s:'moment-of-transition',img:'_MG_7759-moment-of-transition-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Glacier Guardian',s:'glacier-guardian',img:'DSC_3541-glacier-guardian-ian-phelps-photography-1920wm.jpg',max:'30x45',ar:1.5},
+    {n:'Salish Salutation',s:'Salish-salutation',img:'_DSC2050-salish-salutation-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Paine Pygmy',s:'paine-pygmy',img:'_DSC4392-paine-pygmy-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Patience',s:'patience',img:'_DSC1097-patience-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+    {n:'Portrait of a Puma',s:'portrait-of-a-puma',img:'_DSC3495-portrait-of-a-puma-ian-phelps-photogrpahy-1920wm.jpg',max:'24x36',ar:1.33},
+    {n:'Otterly Adorable',s:'otterly-adorable',img:'_DSC1653-otterly-adorable-ian-phelps-photography-1920wm.jpg',max:'24x36',ar:1.5},
+  ]},
+  panoramic:{label:'Panoramic',path:'panoramic',prints:[
+    {n:'Dawn on the North Cascades',s:'dawn-on-the-north-cascades',img:'_DSC7556_7560-ian-phelps-photography-dawn-on-the-north-cascades-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Last Light on Glacier Peak',s:'last-light-on-glacier-peak',img:'_DSC7292-Last-Light-on-Glacier-Peak-Ian-Phelps-Photography-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Autumn Bend',s:'autumn-bend',img:'autumn_bend_ian_phelps_lumachrome_20200110-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Winter Wonderland',s:'winter-wonderland',img:'winter-wonderland-ian-phelps-photography-2500wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Valley of Dreams',s:'valley-of-dreams',img:'valley-of-dreams-ian-phelps-photography-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'North Cascades Reflections',s:'north-cascades-reflections',img:'reflections-of-the-north-cascades-ian-phelps-photography-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Morning Majesty',s:'morning-majesty',img:'morning-majesty-ian-phelps-photography-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Timeless Tetons',s:'timeless-tetons',img:'timeless-tetons-ian-phelps-photography-2500.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Dawn at Image Lake',s:'dawn-at-image-lake',img:'dawn-at-image-lake-ian-phelps-photography-1920wm.jpg',max:'20x60',ar:3.0,pano:true},
+    {n:'Autumn Unveiling',s:'autumn-unveiling',img:'autumn-unveiling-ian-phelps-photography-2080wm.jpg',max:'20x60',ar:3.0,pano:true},
+  ]},
+  woven:{label:'Woven: Iceland',path:'woven-irelands-braided-rivers',prints:[
+    {n:'Woven #1',s:'woven-1',img:'_DSC1348-woven-1-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #2',s:'woven-2',img:'_DSC1812-woven-2-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #3',s:'woven-3',img:'_DSC1395-woven-3-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #4',s:'woven-4',img:'_DSC1554-woven-4-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #5',s:'woven-5',img:'_DSC1772-woven-5-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #6',s:'woven-6',img:'_DSC1370-woven-6-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #7',s:'woven-7',img:'_DSC1362-woven-7-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #8',s:'woven-8',img:'_DSC1405-woven-8-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #9',s:'woven-9',img:'_DSC1435-woven-9-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #10',s:'woven-10',img:'_DSC1490-woven-10-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #11',s:'woven-11',img:'_DSC1887-woven-11-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #12',s:'woven-12',img:'_DSC1413-woven-12-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #13',s:'woven-13',img:'_DSC1661-woven-13-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+    {n:'Woven #14',s:'woven-14',img:'_DSC1765-woven-14-ian-phelps-photography-1920wm.jpg',max:'40x60',ar:0.75},
+  ]}
+};
+
+const SIZES=[
+  {label:'12×18″',w:18,h:12,pano:false},{label:'16×24″',w:24,h:16,pano:false},
+  {label:'20×30″',w:30,h:20,pano:false},{label:'24×36″',w:36,h:24,pano:false},
+  {label:'30×45″',w:45,h:30,pano:false},{label:'40×60″',w:60,h:40,pano:false},
+  {label:'12×36″',w:36,h:12,pano:true},{label:'16×48″',w:48,h:16,pano:true},{label:'20×60″',w:60,h:20,pano:true},
+];
+const MAX_ORD=['12x18','16x24','20x30','24x36','30x45','40x60','12x36','16x48','20x60'];
+function sizeAvail(sz,p){
+  if(sz.pano&&!p.pano)return false;if(!sz.pano&&p.pano)return false;
+  const key=sz.pano?`${sz.h}x${sz.w}`:`${Math.min(sz.w,sz.h)}x${Math.max(sz.w,sz.h)}`;
+  return MAX_ORD.indexOf(key)<=MAX_ORD.indexOf(p.max);
+}
+const REF={
+  'letter-long':{label:'Letter paper (11″ long edge)',in:11.0},
+  'letter-short':{label:'Letter paper (8.5″ short edge)',in:8.5},
+  'a4-long':{label:'A4 paper (297mm long edge)',in:11.693},
+  'a4-short':{label:'A4 paper (210mm short edge)',in:8.268},
+  '12in':{label:'12″ ruler',in:12.0},
+};
+
+let S={
+  cat:'new',print:CATS.new.prints[0],size:SIZES[2],
+  printType:'metal',frame:'none',
+  scale:100,shadow:10,brightness:100,
+  px:0.5,py:0.38,
+  roomImg:null,printImg:null,canvasW:0,canvasH:0,
+  dragging:false,dox:0,doy:0,
+  pxPerInch:null,calStep:0,calPt1:null,calPt2:null,ref:'letter-long',
+  isTemplate:false,
+};
+
+const canvas=document.getElementById('room-canvas');
+const ctx=canvas.getContext('2d');
+const calCv=document.getElementById('cal-overlay');
+const calCtx=calCv.getContext('2d');
+
+// ── THUMBNAIL RENDERING VIA CANVAS (bypasses CORS img tag block) ──────────────
+const thumbCache={};
+function renderThumbCanvas(cvs,imgUrl){
+  const key=imgUrl;
+  const draw=(img)=>{
+    const c=cvs.getContext('2d');
+    const cw=cvs.width,ch=cvs.height;
+    const ar=img.width/img.height;
+    let sw=cw,sh=sw/ar;
+    if(sh<ch){sh=ch;sw=sh*ar;}
+    const ox=(cw-sw)/2,oy=(ch-sh)/2;
+    c.drawImage(img,ox,oy,sw,sh);
+  };
+  if(thumbCache[key]){draw(thumbCache[key]);return;}
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=()=>{thumbCache[key]=img;draw(img);};
+  img.onerror=()=>{
+    const c=cvs.getContext('2d');c.fillStyle='#1e1e1e';c.fillRect(0,0,cvs.width,cvs.height);
+    c.fillStyle='#5a5450';c.font='9px Raleway,sans-serif';c.textAlign='center';
+    c.fillText('Preview',cvs.width/2,cvs.height/2+3);
+  };
+  img.src=imgUrl;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init(){
+  buildTemplateButtons();
+  renderGrid('new');
+  renderSizes();
+  loadPrint(S.print);
+}
+
+function switchCat(cat,el){
+  S.cat=cat;document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderGrid(cat);
+}
+
+function renderGrid(cat){
+  const g=document.getElementById('print-grid');g.innerHTML='';
+  CATS[cat].prints.forEach(p=>{
+    const d=document.createElement('div');d.className='p-thumb'+(p===S.print?' selected':'');
+    // Canvas thumbnail instead of img tag
+    const cvs=document.createElement('canvas');cvs.width=150;cvs.height=56;
+    const nm=document.createElement('div');nm.className='p-thumb-name';nm.textContent=p.n;
+    d.appendChild(cvs);d.appendChild(nm);
+    // Lazy-load thumbnails via IntersectionObserver
+    const obs=new IntersectionObserver(entries=>{
+      entries.forEach(e=>{if(e.isIntersecting){renderThumbCanvas(cvs,sqThumb(p.img));obs.disconnect();}});
+    },{threshold:0.1});
+    obs.observe(d);
+    d.onclick=()=>{
+      document.querySelectorAll('.p-thumb').forEach(x=>x.classList.remove('selected'));
+      d.classList.add('selected');S.print=p;
+      document.getElementById('sel-name').textContent=p.n;
+      document.getElementById('sel-link').href=`https://www.ianphelpsphotography.com/${CATS[cat].path}/${p.s}`;
+      renderSizes();loadPrint(p);
+    };
+    g.appendChild(d);
+  });
+  document.getElementById('sel-link').href=`https://www.ianphelpsphotography.com/${CATS[cat].path}/${S.print.s}`;
+}
+
+function renderSizes(){
+  const g=document.getElementById('size-grid');g.innerHTML='';let fa=null;
+  SIZES.forEach(sz=>{
+    const avail=sizeAvail(sz,S.print),sel=sz===S.size;
+    const c=document.createElement('div');c.className='size-chip'+(sel?' selected':'')+(avail?'':' unavail');
+    c.textContent=sz.label;if(!avail)c.title='Not available for this image';
+    if(avail){c.onclick=()=>{document.querySelectorAll('.size-chip').forEach(x=>x.classList.remove('selected'));c.classList.add('selected');S.size=sz;render();updateSizeNote(sz);};if(!fa)fa={sz,c};}
+    g.appendChild(c);
+  });
+  if(!sizeAvail(S.size,S.print)&&fa){S.size=fa.sz;fa.c.classList.add('selected');}
+  updateSizeNote(S.size);
+}
+function updateSizeNote(sz){
+  const box=document.getElementById('size-info'),txt=document.getElementById('size-info-text');
+  if(sz.w>=45){box.style.display='block';txt.textContent=`${sz.label} is a large-format statement piece. Recommended for rooms with 9′+ ceilings.`;}
+  else box.style.display='none';
+}
+function selOpt(el,key,val){
+  el.parentElement.querySelectorAll('.opt-card').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');S[key]=val;if(S.roomImg)render();
+}
+function onSlider(key,val,id,unit){S[key]=parseFloat(val);document.getElementById(id).textContent=val+unit;if(S.roomImg)render();}
+function selRef(key,el){S.ref=key;document.querySelectorAll('.ref-opt').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');if(S.pxPerInch){S.pxPerInch=null;updateCalStatus();}}
+function loadPrint(p){
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=()=>{S.printImg=img;if(S.roomImg)render();};
+  img.src=sqFull(p.img);
+}
+
+// ── ROOM PHOTO UPLOAD ─────────────────────────────────────────────────────────
+document.getElementById('room-input').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      S.roomImg=img;S.pxPerInch=null;S.calStep=0;S.px=0.5;S.py=0.38;S.isTemplate=false;
+      if(activeRoomEl){activeRoomEl.classList.remove('active-room');activeRoomEl=null;}
+      setupCanvas(img);
+      document.getElementById('upload-state').style.display='none';
+      canvas.style.display='block';
+      document.getElementById('wm-overlay').style.display='block';
+      document.getElementById('dl-btn').disabled=false;
+      document.getElementById('cal-btn').style.display='inline-flex';
+      document.getElementById('template-btn').style.display='inline-flex';
+      document.getElementById('cal-section').style.display='block';
+      updateCalStatus();render();
+      setHint('Click to place your print, then drag to reposition.');
+    };
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(f);e.target.value='';
+});
+
+function setupCanvas(img){
+  const maxW=document.getElementById('canvas-area').clientWidth||700,maxH=560;
+  const ar=img.width/img.height;let w=Math.min(maxW,img.width),h=w/ar;
+  if(h>maxH){h=maxH;w=h*ar;}
+  S.canvasW=Math.round(w);S.canvasH=Math.round(h);
+  [canvas,calCv].forEach(cv=>{cv.width=S.canvasW;cv.height=S.canvasH;cv.style.width=S.canvasW+'px';cv.style.height=S.canvasH+'px';});
+  calCv.style.display='block';
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function getPrintDims(){
+  const sz=S.size;
+  const pw=S.pxPerInch?sz.w*S.pxPerInch*(S.scale/100):S.canvasW*0.28*(S.scale/100);
+  let ar=sz.w/sz.h;
+  if(S.printImg&&!sz.pano)ar=S.printImg.width/S.printImg.height;
+  if(sz.pano)ar=sz.w/sz.h;
+  return{pw,ph:pw/ar};
+}
+function render(){
+  if(!S.roomImg)return;
+  ctx.clearRect(0,0,S.canvasW,S.canvasH);
+  ctx.save();ctx.filter=`brightness(${S.brightness}%)`;ctx.drawImage(S.roomImg,0,0,S.canvasW,S.canvasH);ctx.filter='none';ctx.restore();
+  if(!S.printImg)return;
+  const{pw,ph}=getPrintDims();
+  const cx=S.px*S.canvasW,cy=S.py*S.canvasH,x=cx-pw/2,y=cy-ph/2;
+  ctx.save();
+  if(S.shadow>0){ctx.shadowColor='rgba(0,0,0,0.65)';ctx.shadowBlur=S.shadow*2.5;ctx.shadowOffsetX=S.shadow*0.6;ctx.shadowOffsetY=S.shadow*1.2;}
+  const FC={black:'#080808',white:'#e8e4de',natural:'#8a6840','mat-white':'#080808','mat-black':'#1e1e1e'};
+  if(S.frame==='none'){
+    ctx.drawImage(S.printImg,x,y,pw,ph);ctx.shadowColor='transparent';
+    if(S.printType==='metal'){ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1.5;ctx.strokeRect(x,y,pw,ph);}
+  } else {
+    const fw=Math.max(3,pw*0.022),matW=(S.frame==='mat-white'||S.frame==='mat-black')?pw*0.065:0;
+    ctx.fillStyle=FC[S.frame]||'#080808';ctx.fillRect(x-fw,y-fw,pw+fw*2,ph+fw*2);ctx.shadowColor='transparent';
+    if(matW>0){ctx.fillStyle=S.frame==='mat-white'?'#f0ede8':'#161616';ctx.fillRect(x,y,pw,ph);ctx.drawImage(S.printImg,x+matW,y+matW,pw-matW*2,ph-matW*2);}
+    else ctx.drawImage(S.printImg,x,y,pw,ph);
+  }
+  ctx.restore();
+  ctx.save();ctx.globalAlpha=0.16;ctx.fillStyle='#fff';
+  ctx.font=`300 ${Math.max(9,pw*0.024)}px 'Playfair Display',Georgia,serif`;
+  ctx.textAlign='center';ctx.fillText('ianphelpsphotography.com',cx,y+ph-Math.max(5,pw*0.016));
+  ctx.restore();
+}
+
+// ── CALIBRATION ───────────────────────────────────────────────────────────────
+function startCalibration(){
+  if(!S.roomImg)return;
+  if(S.isTemplate){alert('Template rooms are pre-calibrated. Use the Scale slider to fine-tune print size.');return;}
+  S.calStep=1;S.calPt1=null;S.calPt2=null;
+  document.getElementById('cal-banner').style.display='flex';
+  document.getElementById('cal-banner-text').innerHTML=`<strong>Step 1 of 2:</strong> Click one end of your ${REF[S.ref].label}`;
+  calCv.classList.add('active');canvas.style.pointerEvents='none';setHint('');clearCalOverlay();
+}
+function cancelCalibration(){
+  S.calStep=0;S.calPt1=null;calCv.classList.remove('active');canvas.style.pointerEvents='auto';
+  document.getElementById('cal-banner').style.display='none';clearCalOverlay();
+  setHint(S.pxPerInch?'Scale calibrated — click to place, drag to reposition.':'Click to place your print, then drag to reposition.');
+}
+function clearCalOverlay(){calCtx.clearRect(0,0,calCv.width,calCv.height);}
+function drawXhair(x,y){
+  calCtx.save();calCtx.strokeStyle='#ffd700';calCtx.lineWidth=1.5;calCtx.shadowColor='rgba(0,0,0,0.8)';calCtx.shadowBlur=4;
+  calCtx.beginPath();calCtx.moveTo(x-10,y);calCtx.lineTo(x+10,y);calCtx.moveTo(x,y-10);calCtx.lineTo(x,y+10);calCtx.stroke();
+  calCtx.beginPath();calCtx.arc(x,y,4,0,Math.PI*2);calCtx.fillStyle='#ffd700';calCtx.fill();calCtx.restore();
+}
+function drawCalOverlay(){
+  clearCalOverlay();if(!S.calPt1)return;drawXhair(S.calPt1.x,S.calPt1.y);
+  if(S.calPt2){
+    drawXhair(S.calPt2.x,S.calPt2.y);
+    const dx=S.calPt2.x-S.calPt1.x,dy=S.calPt2.y-S.calPt1.y;
+    calCtx.save();calCtx.strokeStyle='#ffd700';calCtx.lineWidth=1.5;calCtx.setLineDash([4,3]);
+    calCtx.beginPath();calCtx.moveTo(S.calPt1.x,S.calPt1.y);calCtx.lineTo(S.calPt2.x,S.calPt2.y);calCtx.stroke();calCtx.setLineDash([]);
+    const mx=(S.calPt1.x+S.calPt2.x)/2,my=(S.calPt1.y+S.calPt2.y)/2-12;
+    calCtx.fillStyle='rgba(10,10,10,0.8)';calCtx.beginPath();calCtx.roundRect(mx-34,my-14,68,18,3);calCtx.fill();
+    calCtx.fillStyle='#ffd700';calCtx.font='500 10px Raleway,sans-serif';calCtx.textAlign='center';
+    calCtx.fillText(Math.round(Math.sqrt(dx*dx+dy*dy))+'px',mx,my-2);calCtx.restore();
+  }
+}
+function calCoords(e){
+  const r=calCv.getBoundingClientRect();
+  const cx=e.touches?e.touches[0].clientX:e.clientX,cy=e.touches?e.touches[0].clientY:e.clientY;
+  return{x:(cx-r.left)*(S.canvasW/r.width),y:(cy-r.top)*(S.canvasH/r.height)};
+}
+calCv.addEventListener('click',e=>{
+  if(S.calStep===0)return;
+  const{x,y}=calCoords(e);
+  if(S.calStep===1){S.calPt1={x,y};S.calStep=2;document.getElementById('cal-banner-text').innerHTML=`<strong>Step 2 of 2:</strong> Click the opposite end of your ${REF[S.ref].label}`;drawCalOverlay();}
+  else if(S.calStep===2){S.calPt2={x,y};drawCalOverlay();const dx=S.calPt2.x-S.calPt1.x,dy=S.calPt2.y-S.calPt1.y;S.pxPerInch=Math.sqrt(dx*dx+dy*dy)/REF[S.ref].in;setTimeout(()=>{cancelCalibration();clearCalOverlay();render();updateCalStatus();},800);}
+});
+calCv.addEventListener('touchstart',e=>{e.preventDefault();calCv.dispatchEvent(new MouseEvent('click',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));},{passive:false});
+function updateCalStatus(){
+  const badge=document.getElementById('cal-badge'),box=document.getElementById('cal-info-box'),txt=document.getElementById('cal-info-text'),btn=document.getElementById('cal-btn'),lbl=document.getElementById('cal-btn-label');
+  if(S.pxPerInch){
+    badge.className='cal-badge ok';badge.textContent='✓ Calibrated';
+    box.className='info-box cal-ok';txt.textContent=S.isTemplate?'Template pre-calibrated. Use Scale slider to fine-tune.':` Scale set using ${REF[S.ref].label}. Prints now render at true dimensions.`;
+    btn.classList.add('calibrated');lbl.textContent='Re-calibrate';
+  } else {
+    badge.className='cal-badge no';badge.textContent='Not Calibrated';
+    box.className='info-box cal-no';txt.textContent='Select your reference object then click "Calibrate Scale" below the image.';
+    btn.classList.remove('calibrated');lbl.textContent='Calibrate Scale';
+  }
+}
+
+// ── INTERACTIONS ──────────────────────────────────────────────────────────────
+function cc(e){
+  const r=canvas.getBoundingClientRect();
+  const cx=e.touches?e.touches[0].clientX:e.clientX,cy=e.touches?e.touches[0].clientY:e.clientY;
+  return{nx:(cx-r.left)*(S.canvasW/r.width)/S.canvasW,ny:(cy-r.top)*(S.canvasH/r.height)/S.canvasH};
+}
+function overPrint(nx,ny){
+  if(!S.printImg)return false;
+  const{pw,ph}=getPrintDims();
+  return Math.abs(nx-S.px)<pw/2/S.canvasW&&Math.abs(ny-S.py)<ph/2/S.canvasH;
+}
+canvas.addEventListener('click',e=>{if(S.calStep>0||S.dragging)return;const{nx,ny}=cc(e);S.px=nx;S.py=ny;render();setHint('Drag the print to reposition it.');});
+canvas.addEventListener('mousedown',e=>{if(S.calStep>0)return;const{nx,ny}=cc(e);if(overPrint(nx,ny)){S.dragging=true;S.dox=nx-S.px;S.doy=ny-S.py;canvas.style.cursor='grabbing';e.preventDefault();}});
+canvas.addEventListener('mousemove',e=>{if(!S.dragging)return;const{nx,ny}=cc(e);S.px=Math.max(0.02,Math.min(0.98,nx-S.dox));S.py=Math.max(0.02,Math.min(0.98,ny-S.doy));render();});
+canvas.addEventListener('mouseup',()=>{S.dragging=false;canvas.style.cursor='crosshair';});
+canvas.addEventListener('mouseleave',()=>{S.dragging=false;canvas.style.cursor='crosshair';});
+canvas.addEventListener('touchstart',e=>{if(S.calStep>0)return;e.preventDefault();const{nx,ny}=cc(e);if(overPrint(nx,ny)){S.dragging=true;S.dox=nx-S.px;S.doy=ny-S.py;}else{S.px=nx;S.py=ny;render();}},{passive:false});
+canvas.addEventListener('touchmove',e=>{if(!S.dragging)return;e.preventDefault();const{nx,ny}=cc(e);S.px=Math.max(0.02,Math.min(0.98,nx-S.dox));S.py=Math.max(0.02,Math.min(0.98,ny-S.doy));render();},{passive:false});
+canvas.addEventListener('touchend',()=>{S.dragging=false;});
+
+function resetPosition(){S.px=0.5;S.py=0.38;document.getElementById('scale-sl').value=100;S.scale=100;document.getElementById('scale-val').textContent='100%';if(S.roomImg)render();}
+function downloadImage(){if(!S.roomImg){alert('Please upload or select a room first.');return;}const link=document.createElement('a');link.download=`ian-phelps-${S.print.n.toLowerCase().replace(/\s+/g,'-')}-preview.jpg`;link.href=canvas.toDataURL('image/jpeg',0.93);link.click();}
+function setHint(t){document.getElementById('canvas-hint').textContent=t;}
+
+init();
+</script>
+</body>
+</html>
